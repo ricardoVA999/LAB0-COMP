@@ -1,12 +1,13 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.Utils;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.antlr.v4.runtime.tree.Tree;
+import org.antlr.v4.runtime.tree.Trees;
 
 class  tks {
     private String name;
@@ -38,7 +39,7 @@ class  tks {
 public class Lab0_Main {
     public static void main(String[] args) throws Exception {
         Boolean contentHasErr = false;
-        String fileName = "hola.YAPL";
+        String fileName = "hello.YAPL";
         System.out.println("Parsing: " + fileName);
 
         FileInputStream fis = new FileInputStream(new File(fileName));
@@ -78,7 +79,7 @@ public class Lab0_Main {
             System.out.println("\nErrores encontrados al realizar analisis lexico");
         }
 
-        FileInputStream fis2 = new FileInputStream(new File(args[0]));
+        FileInputStream fis2 = new FileInputStream(fileName);
         ANTLRInputStream input2 = new ANTLRInputStream(fis2);
         YAPLLexer lexer2 = new YAPLLexer(input2);
 
@@ -87,7 +88,11 @@ public class Lab0_Main {
         SyntaxErrorListener listener = new SyntaxErrorListener();
         parser.removeErrorListeners();
         parser.addErrorListener(listener);
-        parser.program();
+        parser.setBuildParseTree(true);
+        RuleContext tree = parser.program();
+        List<String> ruleNamesList = Arrays.asList(parser.getRuleNames());
+        String prettyTree = TreeUtils.toPrettyTree(tree, ruleNamesList);
+
         List<SyntaxError> errorList = listener.getSyntaxErrors();
 
         for (int i = 0; i <= errorList.size() - 1; i = i + 1) {
@@ -102,8 +107,8 @@ public class Lab0_Main {
         }
 
         if (errorList.size() < 1 && !contentHasErr){
-            Runtime.getRuntime().exec("/bin/bash -c java org.antlr.v4.gui.TestRig YAPL program -gui hola.YAPL");
-
+            System.out.println("Arbol: ");
+            System.out.println(prettyTree);
         }
 
     }
@@ -160,33 +165,63 @@ class SyntaxError
         this.e = e;
     }
 
-    public Recognizer<?, ?> getRecognizer()
+
+    Object getOffendingSymbol()
     {
-        return recognizer;
+        return offendingSymbol.toString().split("=")[1].split(",")[0];
     }
 
-    public Object getOffendingSymbol()
-    {
-        return offendingSymbol;
-    }
-
-    public int getLine()
+    int getLine()
     {
         return line;
     }
 
-    public int getCharPositionInLine()
-    {
-        return charPositionInLine;
-    }
 
-    public String getMessage()
+    String getMessage()
     {
         return message.split("expecting")[1];
     }
 
-    public RecognitionException getException()
-    {
-        return e;
+}
+
+class TreeUtils {
+
+    /** Platform dependent end-of-line marker */
+    private static final String Eol = System.lineSeparator();
+    /** The literal indent char(s) used for pretty-printing */
+    private static final String Indents = "  ";
+    private static int level;
+
+    private TreeUtils() {}
+
+    public static String toPrettyTree(final Tree t, final List<String> ruleNames) {
+        level = 0;
+        return process(t, ruleNames).replaceAll("(?m)^\\s+$", "").replaceAll("\\r?\\n\\r?\\n", Eol);
+    }
+
+    private static String process(final Tree t, final List<String> ruleNames) {
+        if (t.getChildCount() == 0) return Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
+        StringBuilder sb = new StringBuilder();
+        sb.append(lead(level));
+        level++;
+        String s = Utils.escapeWhitespace(Trees.getNodeText(t, ruleNames), false);
+        sb.append(s + ' ');
+        for (int i = 0; i < t.getChildCount(); i++) {
+            sb.append(process(t.getChild(i), ruleNames));
+        }
+        level--;
+        sb.append(lead(level));
+        return sb.toString();
+    }
+
+    private static String lead(int level) {
+        StringBuilder sb = new StringBuilder();
+        if (level > 0) {
+            sb.append(Eol);
+            for (int cnt = 0; cnt < level; cnt++) {
+                sb.append(Indents);
+            }
+        }
+        return sb.toString();
     }
 }
