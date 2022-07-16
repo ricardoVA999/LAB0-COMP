@@ -16,5 +16,5 @@ Compilar archivos generados de la gramatica:
 Compilar y correr el archivo del lab como tal:
 ```
 -> javac -cp "(directorio donde este el paquete)/antlr-4.10.1-complete.jar;" Lab0Main.java
--? java Lab0Main
+-> java Lab0Main
 ```
